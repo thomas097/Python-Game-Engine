@@ -3,7 +3,7 @@
  * Description .... Test file to try out features.
  * Created by ..... Thomas Bellucci
  * Date ........... Dec 20th, 2020
- * Compile ........ g++ -g -o main main.c rasterization.c utilities.c -lglfw -lGL
+ * Compile ........ g++ -O3 -g -o main main.c rasterization.c shading.c utilities.c vmath.c -lglfw -lGL
  */ 
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -12,49 +12,52 @@
 #include <vector>
 #include "rasterization.h"
 #include "utilities.h"
+#include "shading.h"
+#include <chrono>
 using namespace std;
 
-// Constants
-int BUFFER_WIDTH = 640;
-int BUFFER_HEIGHT = 480;
+
+// Render settings
+const int FRAME_WIDTH = 640;
+const int FRAME_HEIGHT = 480;
+const int MAX_DRAW_DIST = 1024;
 
 
 int main(void) {
+
+    // Load Scene.
+    Material mat = create_material("textures/Suzanne.png", .2);
+    Object obj = create_object("models/Suzanne.obj", mat);
+    Light light0 = create_light({0, 1000, 0}, 1.0);
+    Light light1 = create_light({1000, 0, 0}, 1.0);
     
     // Initialize the library and create the window.
     if (!glfwInit()) return -1;
-    GLFWwindow* window = glfwCreateWindow(BUFFER_WIDTH, BUFFER_HEIGHT, "", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(FRAME_WIDTH, FRAME_HEIGHT, "", NULL, NULL);
     if (!window) {
         glfwTerminate();
         return -1;
     }
     
-    // Load Suzanne.
-    vector<Tri> model = ImportOBJ("Models/Suzanne2.obj");
-    Tri tri;
-    
     // Initialize frame and depth buffer.
-    unsigned char* frame_buffer = new unsigned char[BUFFER_WIDTH * BUFFER_HEIGHT * 3];
-    unsigned char* depth_buffer = new unsigned char[BUFFER_WIDTH * BUFFER_HEIGHT]();
-
+    Frame frame = create_frame(FRAME_WIDTH, FRAME_HEIGHT);
 
     // Loop until the user closes the window.
     glfwMakeContextCurrent(window);
     while (!glfwWindowShouldClose(window)) {
         // Clear buffers.
-        memset(frame_buffer, 0, BUFFER_WIDTH * BUFFER_HEIGHT * 3);
-        memset(depth_buffer, 255, BUFFER_WIDTH * BUFFER_HEIGHT);
+        clear_frame(frame, MAX_DRAW_DIST);
         glClear(GL_COLOR_BUFFER_BIT);
         
         // Render scene.
-        unsigned long size = model.size();
-        for (unsigned long i = 0; i < size; i++) {
-            tri = model[i];
-            RasterizeTriangle(BUFFER_WIDTH, BUFFER_HEIGHT, frame_buffer, depth_buffer, tri);
-        }
+        auto start = std::chrono::high_resolution_clock::now();
+        rasterize_object(frame, obj, {light0, light1});
+        auto finish = std::chrono::high_resolution_clock::now();
+        int dur = std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count();
+        printf("fps: %f\n", 1 / (dur* pow(10, -9)));
 
         // Swap front and back buffers.
-        glDrawPixels(BUFFER_WIDTH, BUFFER_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame_buffer);
+        glDrawPixels(FRAME_WIDTH, FRAME_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame.frame_buffer);
         glfwSwapBuffers(window);
 
         // Poll for and process events.

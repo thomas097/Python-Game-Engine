@@ -1,9 +1,3 @@
-/* Project ........ Python Game Engine
- * Filename ....... utilities.c
- * Description .... Defines various utility functions, incl. I/O functions.
- * Created by ..... Thomas Bellucci
- * Date ........... Dec 20th, 2020
- */ 
 #ifndef _UTILITIES_H_
 #define _UTILITIES_H_
 
@@ -16,10 +10,22 @@
 using namespace std;
 
 
-// Returns True when string starts with prefix.
-int StartsWith(const char *string, const char *prefix);
+int is_quad(const char *string);
 
+vector<Tri> import_OBJ(const char filename[]);
 
-vector<Tri> ImportOBJ(const char filename[]);
+Frame create_frame(int width, int height);
+
+Frame clear_frame(Frame frame, float max_depth);
+
+Object create_object(const char obj_file[], Material mat);
+
+Texture create_texture(const char filename[]);
+
+Vec3D create_Vec3D(int x, int y, int z);
+
+Material create_material(const char texture[], float fresnel);
+
+Light create_light(vector<float> loc, float intensity);
 
 #endif
