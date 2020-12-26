@@ -22,31 +22,15 @@ struct Vertex {
 };
 
 struct Tri {
-    Vertex vert0;
-    Vertex vert1;
-    Vertex vert2;
+    Vertex vertex0;
+    Vertex vertex1;
+    Vertex vertex2;
 };
 
 struct Texture {
 	int width;
 	int height;
 	uint8_t* data;
-};
-
-struct Material {
-    Texture tex; // Texture
-    float fresnel;    // Fresnel
-};
-
-struct Light {
-    float intensity; // Light intensity
-    Vec3D loc;       // Location of light.
-
-};
-
-struct Object {
-    vector<Tri> mesh;
-    Material mat;
 };
 
 struct Frame {

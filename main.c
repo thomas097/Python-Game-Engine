@@ -12,7 +12,6 @@
 #include <vector>
 #include "rasterization.h"
 #include "utilities.h"
-#include "shading.h"
 #include <chrono>
 using namespace std;
 
@@ -23,13 +22,11 @@ const int FRAME_HEIGHT = 480;
 const int MAX_DRAW_DIST = 1024;
 
 
-int main(void) {
-
-    // Load Scene.
-    Material mat = create_material("textures/Suzanne.png", .2);
-    Object obj = create_object("models/Suzanne.obj", mat);
-    Light light0 = create_light({0, 1000, 0}, 1.0);
-    Light light1 = create_light({1000, 0, 0}, 1.0);
+int main(void)
+{
+    // Load objects, materials and lights.
+    Texture tex = load_texture("textures/Scene1_baked.png");
+    vector<Tri> mesh = load_mesh("models/Scene1.obj");
     
     // Initialize the library and create the window.
     if (!glfwInit()) return -1;
@@ -49,9 +46,11 @@ int main(void) {
         clear_frame(frame, MAX_DRAW_DIST);
         glClear(GL_COLOR_BUFFER_BIT);
         
-        // Render scene.
+        // Render scene and time execution.
         auto start = std::chrono::high_resolution_clock::now();
-        rasterize_object(frame, obj, {light0, light1});
+        
+        rasterize_object(&frame, &mesh, &tex);
+        
         auto finish = std::chrono::high_resolution_clock::now();
         int dur = std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count();
         printf("fps: %f\n", 1 / (dur* pow(10, -9)));
