@@ -8,11 +8,17 @@
 #include <math.h>
 #include <Eigen/Dense>
 #include <iostream>
-#include "utilities.h"
+#include "imports.h"
 #include "types.h"
 
 
-Eigen::Matrix4f camera_transform(Eigen::Vector3f origin, Eigen::Vector3f direction)
+void transform_vertices(Eigen::MatrixXf* dst, Eigen::Matrix4f M, Eigen::MatrixXf vertices)
+{
+    (*dst) = (M * vertices).colwise().hnormalized();
+}
+
+
+Eigen::Matrix4f* camera_transform(Eigen::Vector3f origin, Eigen::Vector3f direction)
 {
     // Define orthogonal camera basis (u, v, w).
     Eigen::Vector3f t(0, 0, 1);                      // up-vector (assuming z = up)
@@ -35,12 +41,13 @@ Eigen::Matrix4f camera_transform(Eigen::Vector3f origin, Eigen::Vector3f directi
           0, 0, 0, 1;
       
     // Transform world points into camera coordinates.
-    Eigen::Matrix4f Mcam = Muvw * Mo;
+    Eigen::Matrix4f* Mcam = new Eigen::Matrix4f(4, 4);
+    (*Mcam) = Muvw * Mo;
     return Mcam;
 }
 
 
-Eigen::Matrix4f viewport_transform(unsigned int frame_width, unsigned int frame_height, float fov, float n, float f)
+Eigen::Matrix4f* viewport_transform(unsigned int frame_width, unsigned int frame_height, float fov, float n, float f)
 {
     // Compute t, half the height of the frustum.
     float t = n * tan(M_PI * fov / 360);
@@ -66,99 +73,16 @@ Eigen::Matrix4f viewport_transform(unsigned int frame_width, unsigned int frame_
            
 
     // Canonical volume transform.
-    Eigen::Matrix4f Mvp;
-    Mvp << nx/2, 0, 0, (nx-1)/2,
-           0, ny/2, 0, (ny-1)/2,
-           0, 0, 1, 0,
-           0, 0, 0, 1;
-           
+    Eigen::Matrix4f Mview;
+    Mview << nx/2, 0, 0, (nx-1)/2,
+             0, ny/2, 0, (ny-1)/2,
+             0, 0, 1, 0,
+             0, 0, 0, 1;
+             
     // Precompute viewport transform.
-    return Mvp * Morth * P;
-}
-
-
-
-
-
-// Render settings
-const int FRAME_WIDTH = 720;
-const int FRAME_HEIGHT = 480;
-const int MAX_DRAW_DIST = 1024;
-
-int main(void)
-{
-
-    // TODO: Create cube with vertices along edges.
-    Eigen::MatrixXf vertices(4, 27);
-    int i = 0;
-    for (int x = -1; x < 2; x += 1) {
-        for (int y = -1; y < 2; y += 1) {
-            for (int z = -1; z < 2; z += 1) {
-                vertices(0, i) = x;
-                vertices(1, i) = y;
-                vertices(2, i) = z;
-                vertices(3, i) = 1;
-                i++;   
-            }
-        }
-    }
-    
-    // TODO; Create camera 
-    Eigen::Vector3f origin(4, 4, 4);
-    Eigen::Vector3f direction(-1, -1, -1);
-    
-    Eigen::Matrix4f Mvp = viewport_transform(FRAME_WIDTH, FRAME_HEIGHT, 30, -1, -50);
-    Eigen::Matrix4f Mcam = camera_transform(origin, direction);
-    Eigen::Matrix4f M = Mvp * Mcam;
-    
-    // Transform points.
-    Eigen::MatrixXf new_points(3, 27);
-    new_points = (M * vertices).colwise().hnormalized();
-    
-    
-    
-    
-    
-    // Initialize the library and create the window.
-    if (!glfwInit()) return -1;
-    GLFWwindow* window = glfwCreateWindow(FRAME_WIDTH, FRAME_HEIGHT, "", NULL, NULL);
-    if (!window) {
-        glfwTerminate();
-        return -1;
-    }
-    
-    // Initialize frame and depth buffer.
-    Frame frame = create_frame(FRAME_WIDTH, FRAME_HEIGHT);
-    
-    // Loop until the user closes the window.
-    glfwMakeContextCurrent(window);
-    while (!glfwWindowShouldClose(window)) {
-        // Clear buffers.
-        clear_frame(frame, MAX_DRAW_DIST);
-        glClear(GL_COLOR_BUFFER_BIT);
-        
-        // Render scene and time execution.
-        int x, y;
-        unsigned long i;
-        for (int j = 0; j < 27; j++ ){
-            x = (int) new_points(0, j);
-            y = (int) new_points(1, j);
-            i = 3 * (FRAME_WIDTH * y + x);
-            frame.frame_buffer[i] = 255;
-            frame.frame_buffer[i+1] = 255;
-            frame.frame_buffer[i+2] = 255;
-        }
-
-        // Swap front and back buffers.
-        glDrawPixels(FRAME_WIDTH, FRAME_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame.frame_buffer);
-        glfwSwapBuffers(window);
-
-        // Poll for and process events.
-        glfwPollEvents();
-    }
-
-    glfwTerminate();
-    return 0;
+    Eigen::Matrix4f* Mvp = new Eigen::Matrix4f(4, 4);
+    (*Mvp) = Mview * Morth * P;
+    return Mvp;
 }
 
 

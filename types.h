@@ -1,30 +1,27 @@
 #ifndef _TYPES_H_
 #define _TYPES_H_
 #include <stdint.h>
-#include <vector>
-using namespace std;
-
-struct Vec2D {
-    float s;
-    float t;
-};
-
-struct Vec3D {
-    float x;
-    float y;
-    float z;
-};
-
-struct Vertex {
-    Vec3D v;
-    Vec2D vt;
-    Vec3D vn;
-};
+#include <Eigen/Dense>
 
 struct Tri {
-    Vertex vertex0;
-    Vertex vertex1;
-    Vertex vertex2;
+    unsigned int iv0;
+    unsigned int iv1;
+    unsigned int iv2;
+    
+    unsigned int ivt0;
+    unsigned int ivt1;
+    unsigned int ivt2;
+    
+    unsigned int ivn0;
+    unsigned int ivn1;
+    unsigned int ivn2;
+};
+
+struct Mesh {
+    Eigen::MatrixXf* v;
+    Eigen::MatrixXf* vn;
+    Eigen::MatrixXf* vt;
+    std::vector<Tri>* f;
 };
 
 struct Texture {
@@ -33,11 +30,16 @@ struct Texture {
 	uint8_t* data;
 };
 
-struct Frame {
-    int width;
-    int height;
+struct Camera {
+    Eigen::Matrix4f* Mvp;
+    Eigen::Matrix4f* Mcam;
+    Eigen::Vector3f* origin;
+    Eigen::Vector3f* direction;
+    int frame_width;
+    int frame_height;
     unsigned char* frame_buffer;
     float* depth_buffer;
+    float max_draw_dist;
 };
 
 

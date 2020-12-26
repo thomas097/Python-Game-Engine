@@ -6,23 +6,24 @@
  */  
 #include <math.h>
 #include <cstdio>
+#include <iostream>
 #include <algorithm>
 #include <vector>
+#include <Eigen/Dense>
+#include <Eigen/Core>
 #include "types.h"
-#include "utilities.h"
 using namespace std;
 
 
 #define NUM_THREADS 4
 
 
-int is_backface(Tri tri) {
-    float z_dir = tri.vertex0.vn.z + tri.vertex1.vn.z + tri.vertex2.vn.z;
-    return z_dir > 0;
+int is_backface(Eigen::Vector3f normal) {
+    return normal(2) > 0;
 }
 
 
-Vec3D texture_lookup(Texture* tex, float s, float t) {
+unsigned int texture_lookup(Texture* tex, float s, float t) {
     int width = tex->width;
     int height = tex->height;
     
@@ -33,16 +34,11 @@ Vec3D texture_lookup(Texture* tex, float s, float t) {
     // Repeat texture.
     u = u % width;
     v = v % height;
-    if (u < 0) width - u;
-    if (v < 0) width - v;
+    if (u < 0) u = width - u;
+    if (v < 0) v = width - v;
     
-    // Put pixel in vector.
-    Vec3D pixel;
-    int i = 3 * (v * width + u);
-    pixel.x = tex->data[i];
-    pixel.y = tex->data[i + 1];
-    pixel.z = tex->data[i + 2];
-    return pixel;
+    // Return pixel index.
+    return 3 * (v * width + u);
 }
 
 
@@ -51,32 +47,39 @@ float f(float x0, float y0, float x1, float y1, float x, float y) {
 }
 
 
-void rasterize_triangle(Frame* frame, Tri &tri, Texture* tex) {
+void rasterize_mesh_triangle(Camera* cam, Eigen::MatrixXf* v, Eigen::MatrixXf* vn, Eigen::MatrixXf* vt, Tri tri, Texture* tex) 
+{   
+    // Compute normal vector.
+    //Eigen::Vector4f normal0 = vn->col(tri.ivn0);
+    //Eigen::Vector4f normal1 = vn->col(tri.ivn1);
+    //Eigen::Vector4f normal2 = vn->col(tri.ivn2);
+    //Eigen::Vector3f normal = (normal0 + normal1 + normal2).hnormalized().normalized();
+    
     // Backface culling
-    if (is_backface(tri)) return;
+    //if (is_backface(normal)) return;
     
     // Unpack vertex coordinates.
-    float x0 = tri.vertex0.v.x;
-    float y0 = tri.vertex0.v.y;
-    float z0 = tri.vertex0.v.z;
+    float x0 = (*v).col(tri.iv0)(0);
+    float y0 = (*v).col(tri.iv0)(1);
+    float z0 = (*v).col(tri.iv0)(2);
     
-    float x1 = tri.vertex1.v.x;
-    float y1 = tri.vertex1.v.y;
-    float z1 = tri.vertex1.v.z;
+    float x1 = (*v).col(tri.iv1)(0);
+    float y1 = (*v).col(tri.iv1)(1);
+    float z1 = (*v).col(tri.iv1)(2);
     
-    float x2 = tri.vertex2.v.x;
-    float y2 = tri.vertex2.v.y;
-    float z2 = tri.vertex2.v.z;
+    float x2 = (*v).col(tri.iv2)(0);
+    float y2 = (*v).col(tri.iv2)(1);
+    float z2 = (*v).col(tri.iv2)(2);
     
     // Unpack texture coordinates.
-    float s0 = tri.vertex0.vt.s;
-    float t0 = tri.vertex0.vt.t;
+    float s0 = (*vt).col(tri.ivt0)(0);
+    float t0 = (*vt).col(tri.ivt0)(1);
 
-    float s1 = tri.vertex1.vt.s;
-    float t1 = tri.vertex1.vt.t;
+    float s1 = (*vt).col(tri.ivt1)(0);
+    float t1 = (*vt).col(tri.ivt1)(1);
     
-    float s2 = tri.vertex2.vt.s;
-    float t2 = tri.vertex2.vt.t;
+    float s2 = (*vt).col(tri.ivt2)(0);
+    float t2 = (*vt).col(tri.ivt2)(1);
      
     // Determine bounding box for triangle.
     int x_min = floor(min(x0, min(x1, x2)));
@@ -98,19 +101,19 @@ void rasterize_triangle(Frame* frame, Tri &tri, Texture* tex) {
     // Precompute updates in x- and y-direction
     float alpha_x_update = (y1 - y2) / fa; 
     float beta_x_update = (y2 - y0) / fb;
-    float alpha_y_update = (x2 - x1) / fa; 
+    float alpha_y_update = (x2 - x1) / fa;
     float beta_y_update = (x0 - x2) / fb;
     
     // Precompute f12 and f20 as s12 and d20 respectively.
     float alpha_init = f(x1, y1, x2, y2, x_min, y_min) / fa;
     float beta_init = f(x2, y2, x0, y0, x_min, y_min) / fb;
     
-    int frame_width = frame->width;
-    int frame_height = frame->height;
+    int frame_width = cam->frame_width;
+    int frame_height = cam->frame_height;
     
-    int y, x, i, in_triangle;
+    int y, x, in_triangle, i;
+    unsigned int j;
     float z, s, t;
-    Vec3D pixel;
     
     for (y = y_min; y <= y_max; y++) {
         
@@ -139,21 +142,21 @@ void rasterize_triangle(Frame* frame, Tri &tri, Texture* tex) {
                     z = z0 * alpha + z1 * beta + z2 * gamma;
                  
                     // Perform depth test.
-                    i = frame->width * y + x; 
-                    if (z < frame->depth_buffer[i]) {
+                    i = frame_width * (frame_height - y) + x; 
+                    if (z < cam->depth_buffer[i]) {
                     
                         // Compute texture coordinate.
                         s = alpha * s0 + beta * s1 + gamma * s2;
                         t = alpha * t0 + beta * t1 + gamma * t2;
                         
                         // Fill in pixel with correct color.
-                        pixel = texture_lookup(tex, s, t);
-                        frame->frame_buffer[3 * i] = pixel.x;
-                        frame->frame_buffer[3 * i + 1] = pixel.y;
-                        frame->frame_buffer[3 * i + 2] = pixel.z;
+                        j = texture_lookup(tex, s, t);
+                        cam->frame_buffer[3 * i] = tex->data[j];
+                        cam->frame_buffer[3 * i + 1] = tex->data[j + 1];
+                        cam->frame_buffer[3 * i + 2] = tex->data[j + 2];
                         
                         // Update depth buffer.
-                        frame->depth_buffer[i] = z;
+                        cam->depth_buffer[i] = z;
                     }
                 }
                 
@@ -173,10 +176,17 @@ void rasterize_triangle(Frame* frame, Tri &tri, Texture* tex) {
 }
 
 
-void rasterize_object(Frame* frame, vector<Tri>* mesh, Texture* tex) {
-    unsigned long size = mesh->size();
-    for (unsigned long i = 0; i < size; i++) {
-        rasterize_triangle(frame, (*mesh)[i], tex);
+void rasterize_mesh(Camera* cam, Mesh* mesh, Texture* tex)
+{  
+    // Transform word coordinates into camera coordinates.
+    Eigen::MatrixXf M, v;
+    M = (*cam->Mvp) * (*cam->Mcam);
+    v = (M * (*mesh->v)).colwise().hnormalized();
+
+    vector<Tri> faces = (*mesh->f);
+    unsigned long num_faces = mesh->f->size();    
+    for (unsigned long i = 0; i < num_faces; i++) {
+        rasterize_mesh_triangle(cam, &v, mesh->vn, mesh->vt, faces[i], tex);
     }
 }
 

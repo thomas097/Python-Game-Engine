@@ -7,14 +7,14 @@
 using namespace std;
 
 
-int is_backface(Tri tri);
+int is_backface(Eigen::Vector3f normal);
 
-Vec3D texture_lookup(Texture tex, float s, float t);
+unsigned int texture_lookup(Texture* tex, float s, float t);
 
 float f(float x0, float y0, float x1, float y1, float x, float y);
 
-void rasterize_triangle(Frame* frame, Tri &tri, Texture* tex);
+void rasterize_mesh_triangle(Camera* cam, Eigen::MatrixXf* v, Eigen::MatrixXf* vn, Eigen::MatrixXf* vt, Tri tri, Texture* tex);
 
-void rasterize_object(Frame* frame, vector<Tri>* mesh, Texture* tex);
+void rasterize_mesh(Camera* cam, Mesh* mesh, Texture* tex);
 
 #endif
