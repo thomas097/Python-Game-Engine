@@ -38,8 +38,9 @@ struct Camera {
     int frame_width;
     int frame_height;
     unsigned char* frame_buffer;
-    float* depth_buffer;
-    float max_draw_dist;
+    double* depth_buffer;
+    double min_draw_dist;
+    double max_draw_dist;
 };
 
 

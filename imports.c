@@ -60,7 +60,7 @@ Mesh load_mesh(const char filename[])
     int v0, v1, v2, v3, vt0, vt1, vt2, vt3, vn0, vn1, vn2, vn3;
     unsigned long i_v, i_vn, i_vt;
     i_v = i_vn = i_vt = 0;
-    float x, y, z, u, v;
+    double x, y, z, u, v;
 
     // Loop through lines in file.
     file = fopen(filename, "r");
@@ -68,7 +68,7 @@ Mesh load_mesh(const char filename[])
 
         // Vertex coordinates.
         if (strncmp(line, "v ", 2) == 0) {
-            sscanf(line, "v %f %f %f", &x, &y, &z);
+            sscanf(line, "v %lf %lf %lf", &x, &y, &z);
             (*vertices)(0, i_v) = x;
             (*vertices)(1, i_v) = y;
             (*vertices)(2, i_v) = z;
@@ -78,7 +78,7 @@ Mesh load_mesh(const char filename[])
         
         // Texture coordinates.
         else if (strncmp(line, "vt ", 3) == 0) {
-            sscanf(line, "vt %f %f", &u, &v);
+            sscanf(line, "vt %lf %lf", &u, &v);
             (*texcoords)(0, i_vt) = u;
             (*texcoords)(1, i_vt) = v;
             i_vt++;
@@ -86,11 +86,11 @@ Mesh load_mesh(const char filename[])
         
         // Normals.
         else if (strncmp(line, "vn ", 3) == 0) {
-            sscanf(line, "vn %f %f %f", &x, &y, &z);
+            sscanf(line, "vn %lf %lf %lf", &x, &y, &z);
             (*normals)(0, i_vn) = x;
             (*normals)(1, i_vn) = y;
             (*normals)(2, i_vn) = z;
-            (*normals)(3, i_vn) = 1;
+            (*normals)(3, i_vn) = 0;
             i_vn++;
         }
         

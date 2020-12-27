@@ -11,7 +11,7 @@ int is_backface(Eigen::Vector3f normal);
 
 unsigned int texture_lookup(Texture* tex, float s, float t);
 
-float f(float x0, float y0, float x1, float y1, float x, float y);
+double f(double x0, double y0, double x1, double y1, double x, double y);
 
 void rasterize_mesh_triangle(Camera* cam, Eigen::MatrixXf* v, Eigen::MatrixXf* vn, Eigen::MatrixXf* vt, Tri tri, Texture* tex);
 
