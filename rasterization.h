@@ -4,17 +4,16 @@
 #include "types.h"
 #include <cstdio>
 #include <vector>
+#include <Eigen/Dense>
 using namespace std;
 
 
 int is_backface(Eigen::Vector3f normal);
 
-unsigned int texture_lookup(Texture* tex, float s, float t);
+double f(Eigen::Vector3f v0, Eigen::Vector3f v1, double x, double y);
 
-double f(double x0, double y0, double x1, double y1, double x, double y);
+void rasterize_mesh_triangle(Camera* cam, Eigen::MatrixXf* v, Eigen::MatrixXf* vn, Eigen::MatrixXf* vt, Tri tri, Texture* texture);
 
-void rasterize_mesh_triangle(Camera* cam, Eigen::MatrixXf* v, Eigen::MatrixXf* vn, Eigen::MatrixXf* vt, Tri tri, Texture* tex);
-
-void rasterize_mesh(Camera* cam, Mesh* mesh, Texture* tex);
+void rasterize_mesh(Camera* cam, Mesh* mesh, Texture* texture);
 
 #endif

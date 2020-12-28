@@ -12,6 +12,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include "types.h"
+#include "shading.h"
 using namespace std;
 
 
@@ -20,99 +21,69 @@ int is_backface(Eigen::Vector3f normal) {
 }
 
 
-unsigned int texture_lookup(Texture* tex, double s, double t) {
-    int width = tex->width;
-    int height = tex->height;
-    
-    // Nearest neighbor interpolation.
-    int u = floor(width * s + .5);
-    int v = floor(height * (1 - t) + .5);
-    
-    // Repeat texture.
-    u = u % width;
-    v = v % height;
-    if (u < 0) u = width - u;
-    if (v < 0) v = width - v;
-    
-    // Return pixel index.
-    return 3 * (v * width + u);
+double f(Eigen::Vector3f v0, Eigen::Vector3f v1, double x, double y) {
+    return (v0(1) - v1(1)) * x + (v1(0) - v0(0)) * y + (v0(0) * v1(1)) - (v1(0) * v0(1));
 }
 
 
-double f(double x0, double y0, double x1, double y1, double x, double y) {
-    return (y0 - y1) * x + (x1 - x0) * y + (x0 * y1) - (x1 * y0);
-}
-
-
-void rasterize_mesh_triangle(Camera* cam, Eigen::MatrixXf* v, Eigen::MatrixXf* vn, Eigen::MatrixXf* vt, Tri tri, Texture* tex) 
+void rasterize_mesh_triangle(Camera* cam, Eigen::MatrixXf* v, Eigen::MatrixXf* vn, Eigen::MatrixXf* vt, Tri tri, Texture* texture) 
 {   
     // Compute normal vector for triangle.
-    Eigen::Vector4f normal0 = vn->col(tri.ivn0);
-    Eigen::Vector4f normal1 = vn->col(tri.ivn1);
-    Eigen::Vector4f normal2 = vn->col(tri.ivn2);
-    Eigen::Vector3f normal = (normal0 + normal1 + normal2).hnormalized().normalized();
+    Eigen::Vector3f vn0 = vn->col(tri.ivn0).head<3>();
+    Eigen::Vector3f vn1 = vn->col(tri.ivn1).head<3>();
+    Eigen::Vector3f vn2 = vn->col(tri.ivn2).head<3>();
+    Eigen::Vector3f normal = (vn0 + vn1 + vn2).normalized();
     
     // Backface culling
     if (is_backface(normal)) return;
     
     // Unpack vertex coordinates.
-    double x0 = (*v).col(tri.iv0)(0);
-    double y0 = (*v).col(tri.iv0)(1);
-    double z0 = (*v).col(tri.iv0)(2);
-    
-    double x1 = (*v).col(tri.iv1)(0);
-    double y1 = (*v).col(tri.iv1)(1);
-    double z1 = (*v).col(tri.iv1)(2);
-    
-    double x2 = (*v).col(tri.iv2)(0);
-    double y2 = (*v).col(tri.iv2)(1);
-    double z2 = (*v).col(tri.iv2)(2);
+    Eigen::Vector3f v0 = v->col(tri.iv0).head<3>();
+    Eigen::Vector3f v1 = v->col(tri.iv1).head<3>();
+    Eigen::Vector3f v2 = v->col(tri.iv2).head<3>();
     
     // Unpack texture coordinates.
-    double s0 = (*vt).col(tri.ivt0)(0);
-    double t0 = (*vt).col(tri.ivt0)(1);
-
-    double s1 = (*vt).col(tri.ivt1)(0);
-    double t1 = (*vt).col(tri.ivt1)(1);
-    
-    double s2 = (*vt).col(tri.ivt2)(0);
-    double t2 = (*vt).col(tri.ivt2)(1);
+    Eigen::Vector2f vt0 = vt->col(tri.ivt0);
+    Eigen::Vector2f vt1 = vt->col(tri.ivt1);
+    Eigen::Vector2f vt2 = vt->col(tri.ivt2);
      
     // Determine bounding box for triangle.
-    int x_min = floor(min(x0, min(x1, x2)));
-    int x_max = ceil(max(x0, max(x1, x2)));
-    int y_min = floor(min(y0, min(y1, y2)));
-    int y_max = ceil(max(y0, max(y1, y2)));
+    int x_min = floor(min(v0(0), min(v1(0), v2(0))));
+    int y_min = floor(min(v0(1), min(v1(1), v2(1))));
+    int x_max = ceil(max(v0(0), max(v1(0), v2(0))));
+    int y_max = ceil(max(v0(1), max(v1(1), v2(1))));
     
     // Pre-compute f values.
-    double fa = 1 / f(x1, y1, x2, y2, x0, y0);
-    double fb = 1 / f(x2, y2, x0, y0, x1, y1);
-    double fg = 1 / f(x0, y0, x1, y1, x2, y2);
+    double fa = 1 / f(v1, v2, v0(0), v0(1));
+    double fb = 1 / f(v2, v0, v1(0), v1(1));
+    double fg = 1 / f(v0, v1, v2(0), v2(1));
     
     // Precompute whether fa and f for offscreen point are the same.
-    double fa_off = f(x1, y1, x2, y2, -1, -1) / fa > 0;
-    double fb_off = f(x2, y2, x0, y0, -1, -1) / fb > 0;
-    double fg_off = f(x0, y0, x1, y1, -1, -1) / fg > 0;
+    double fa_off = f(v1, v2, -1, -1) / fa > 0;
+    double fb_off = f(v2, v0, -1, -1) / fb > 0;
+    double fg_off = f(v0, v1, -1, -1) / fg > 0;
     
     // Update alpha and beta incrementally.
-    double alpha_init = f(x1, y1, x2, y2, x_min, y_min) * fa;
-    double beta_init = f(x2, y2, x0, y0, x_min, y_min) * fb;
-    double alpha_x_update = (y1 - y2) * fa; 
-    double beta_x_update = (y2 - y0) * fb;
-    double alpha_y_update = (x2 - x1) * fa;
-    double beta_y_update = (x0 - x2) * fb;
+    double alpha_init = f(v1, v2, x_min, y_min) * fa;
+    double beta_init = f(v2, v0, x_min, y_min) * fb;
+    double alpha_x_update = (v1(1) - v2(1)) * fa;
+    double alpha_y_update = (v2(0) - v1(0)) * fa; 
+    double beta_x_update = (v2(1) - v0(1)) * fb;
+    double beta_y_update = (v0(0) - v2(0)) * fb;
     
     // Frequently accessed variables.
     int frame_width = cam->frame_width;
     int frame_height = cam->frame_height;
     unsigned char* frame_buffer = cam->frame_buffer;
     double* depth_buffer = cam->depth_buffer;
-    uint8_t* texture = tex->data;
+    uint8_t* texture_data = texture->data;
     double min_draw_dist = cam->min_draw_dist;
     
     signed int y, x;
-    unsigned int j, i;
+    unsigned int i, j;
     double alpha, beta, gamma, z, s, t;
+    Eigen::Vector3f vertex, pixel;
+    Eigen::Vector2f texcoord;
     
     for (y = y_min; y <= y_max; y++) {
     
@@ -130,25 +101,27 @@ void rasterize_mesh_triangle(Camera* cam, Eigen::MatrixXf* v, Eigen::MatrixXf* v
                 if (alpha >= 0 && beta >= 0 && gamma >= 0) {
                     if ((alpha > 0 || fa_off) && (beta > 0 || fb_off) && (gamma > 0 || fg_off)) {        
                                
-                        // Compute vertex depth (more negative is further away).
-                        z = z0 * alpha + z1 * beta + z2 * gamma;
+                        // Interpolate vertex position.
+                        vertex = alpha * v0 + beta * v1 + gamma * v2;
                      
                         // Depth test.
                         i = frame_width * (frame_height - y) + x; 
-                        if (z > depth_buffer[i] && z < min_draw_dist) {
+                        if (vertex(2) > depth_buffer[i] && vertex(2) < 0) {
                         
-                            // Compute texture coordinate.
-                            s = alpha * s0 + beta * s1 + gamma * s2;
-                            t = alpha * t0 + beta * t1 + gamma * t2;
+                            // Interpolate texture coordinate.
+                            texcoord = alpha * vt0 + beta * vt1 + gamma * vt2;
+                            
+                            // Interpolate normals.
+                            normal = alpha * vn0 + beta * vn1 + gamma * vn2;
                             
                             // Fill in pixel with correct color.
-                            j = texture_lookup(tex, s, t);
-                            frame_buffer[3 * i] = texture[j];
-                            frame_buffer[3 * i + 1] = texture[j + 1];
-                            frame_buffer[3 * i + 2] = texture[j + 2];
+                            shade_pixel(&pixel, &vertex, &normal, &texcoord, texture);
+                            frame_buffer[3 * i] = pixel(0);
+                            frame_buffer[3 * i + 1] = pixel(1);
+                            frame_buffer[3 * i + 2] = pixel(2);
                             
                             // Update depth buffer.
-                            depth_buffer[i] = z;
+                            depth_buffer[i] = vertex(2);
                         }
                     }
                 }
@@ -165,7 +138,7 @@ void rasterize_mesh_triangle(Camera* cam, Eigen::MatrixXf* v, Eigen::MatrixXf* v
 }
 
 
-void rasterize_mesh(Camera* cam, Mesh* mesh, Texture* tex)
+void rasterize_mesh(Camera* cam, Mesh* mesh, Texture* texture)
 {  
     // Transform vertices in world coordinates into camera coordinates.
     Eigen::MatrixXf M, v, vn;
@@ -178,7 +151,7 @@ void rasterize_mesh(Camera* cam, Mesh* mesh, Texture* tex)
     vector<Tri> faces = (*mesh->f);
     unsigned long num_faces = mesh->f->size();    
     for (unsigned long i = 0; i < num_faces; i++) {
-        rasterize_mesh_triangle(cam, &v, &vn, mesh->vt, faces[i], tex);
+        rasterize_mesh_triangle(cam, &v, &vn, mesh->vt, faces[i], texture);
     }
 }
 

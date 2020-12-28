@@ -3,7 +3,7 @@
  * Description .... Test file to try out features.
  * Created by ..... Thomas Bellucci
  * Date ........... Dec 20th, 2020
- * Compile ........ g++ -O3 -g -o main main.c rasterization.c camera.c imports.c -lglfw -lGL
+ * Compile ........ g++ -O3 -g -o main main.c shading.c rasterization.c camera.c imports.c -lglfw -lGL
  */ 
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -14,14 +14,13 @@
 #include "imports.h"
 #include "camera.h"
 #include "rasterization.h"
-#include <Eigen/Geometry> 
 using namespace std;
 
 
 // Render settings
 const int FRAME_WIDTH = 640;
 const int FRAME_HEIGHT = 480;
-const float FOV = 35;
+const float FOV = 40;
 const float MIN_DRAW_DIST = 0.001f;
 const float MAX_DRAW_DIST = 100.0f;
 
@@ -33,7 +32,7 @@ int main(void)
     Texture tex = load_texture("textures/Scene2_baked.png");
     Mesh mesh = load_mesh("models/Scene2.obj");
     
-    // Create a camera
+    // Create a camera  
     Eigen::Vector3f origin;
     origin << 5, -5, 5;
     
