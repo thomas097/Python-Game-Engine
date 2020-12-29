@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <Eigen/Dense>
 
+
 struct Tri {
     unsigned int iv0;
     unsigned int iv1;
@@ -18,6 +19,7 @@ struct Tri {
     unsigned int ivn2;
 };
 
+
 struct Mesh {
     Eigen::MatrixXf* v;
     Eigen::MatrixXf* vn;
@@ -25,11 +27,19 @@ struct Mesh {
     std::vector<Tri>* f;
 };
 
+
 struct Texture {
 	int width;
 	int height;
 	uint8_t* data;
 };
+
+
+struct Object {
+    Mesh* mesh;
+    Texture* texture;
+};
+
 
 struct Camera {
     Eigen::Matrix4f* Mvp;

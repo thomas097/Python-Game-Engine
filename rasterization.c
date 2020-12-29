@@ -138,18 +138,22 @@ void rasterize_mesh_triangle(Camera* cam, Eigen::MatrixXf* v, Eigen::MatrixXf* v
 }
 
 
-void rasterize_mesh(Camera* cam, Mesh* mesh, Texture* texture)
+void rasterize_mesh(Camera* cam, Object* obj)
 {  
     // Transform vertices in world coordinates into camera coordinates.
+    Mesh* mesh = obj->mesh;
     Eigen::MatrixXf M, v, vn;
     M = (*cam->Mvp) * (*cam->Mcam);
     v = (M * (*mesh->v)).colwise().hnormalized();
     
     // Transform normals.
-    vn = (*cam->Mcam) * (*mesh->vn);
+    vn = (*cam->Mcam) * (*obj->mesh->vn);
+    
+    // Unpack texture
+    Texture* texture = obj->texture;
 
     vector<Tri> faces = (*mesh->f);
-    unsigned long num_faces = mesh->f->size();    
+    unsigned long num_faces = faces.size();    
     for (unsigned long i = 0; i < num_faces; i++) {
         rasterize_mesh_triangle(cam, &v, &vn, mesh->vt, faces[i], texture);
     }

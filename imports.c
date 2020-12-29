@@ -31,7 +31,7 @@ int count_vertices(const char *string)
 }
 
 
-Mesh load_mesh(const char filename[])
+Mesh* load_mesh(const char filename[])
 {
     // Compute number of vertices, normals and texture coordinates in mesh.
     unsigned long num_verts, num_texcoords, num_normals, num_faces;
@@ -152,23 +152,31 @@ Mesh load_mesh(const char filename[])
     fclose(file);
     printf("Loading completed!\n");
     
-    Mesh mesh;
-    mesh.v = vertices;
-    mesh.vt = texcoords;
-    mesh.vn = normals;
-    mesh.f = faces;
+    Mesh* mesh = new Mesh();
+    mesh->v = vertices;
+    mesh->vt = texcoords;
+    mesh->vn = normals;
+    mesh->f = faces;
     return mesh;
 }
 
 
-Texture load_texture(const char filename[]) {
+Texture* load_texture(const char filename[]) {
     int width, height, bpp;
     uint8_t* data = stbi_load(filename, &width, &height, &bpp, 3);
 
-    Texture tex;
-    tex.width = width;
-    tex.height = height;
-    tex.data = data;
+    Texture* tex = new Texture();
+    tex->width = width;
+    tex->height = height;
+    tex->data = data;
 	return tex;
 }
 
+
+Object load_object(const char filename[], const char tex_filename[])
+{ 
+    Object obj;
+    obj.mesh = load_mesh(filename);
+    obj.texture = load_texture(tex_filename);
+    return obj;
+}

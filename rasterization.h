@@ -14,6 +14,6 @@ double f(Eigen::Vector3f v0, Eigen::Vector3f v1, double x, double y);
 
 void rasterize_mesh_triangle(Camera* cam, Eigen::MatrixXf* v, Eigen::MatrixXf* vn, Eigen::MatrixXf* vt, Tri tri, Texture* texture);
 
-void rasterize_mesh(Camera* cam, Mesh* mesh, Texture* texture);
+void rasterize_mesh(Camera* cam, Object* obj);
 
 #endif

@@ -10,9 +10,11 @@
 using namespace std;
 
 
-Mesh load_mesh(const char filename[]);
+Mesh* load_mesh(const char filename[]);
 
-Texture load_texture(const char filename[]);
+Texture* load_texture(const char filename[]);
+
+Object load_object(const char filename[], const char tex_filename[]);
 
 
 #endif

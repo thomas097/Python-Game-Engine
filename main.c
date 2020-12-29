@@ -29,8 +29,8 @@ const float MAX_DRAW_DIST = 100.0f;
 int main(void)
 {
     // Load object and its texture.
-    Texture tex = load_texture("textures/Scene2_baked.png");
-    Mesh mesh = load_mesh("models/Scene2.obj");
+    Object obj = load_object("models/Scene2.obj",
+                             "textures/Scene2_baked.png");
     
     // Create a camera  
     Eigen::Vector3f origin;
@@ -70,7 +70,7 @@ int main(void)
         origin = R * origin;
         direction = -origin.normalized();
         move_camera(&cam, origin, direction);
-        rasterize_mesh(&cam, &mesh, &tex);
+        rasterize_mesh(&cam, &obj);
         
         auto finish = std::chrono::high_resolution_clock::now();
         int dur = std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count();
