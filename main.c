@@ -20,8 +20,8 @@ using namespace std;
 // Render settings
 const int FRAME_WIDTH = 640;
 const int FRAME_HEIGHT = 480;
-const float FOV = 40;
-const float MIN_DRAW_DIST = 0.001f;
+const float FOV = 35;
+const float MIN_DRAW_DIST = 0.01f;
 const float MAX_DRAW_DIST = 100.0f;
 
 
@@ -42,7 +42,7 @@ int main(void)
     Camera cam = create_camera(FRAME_WIDTH, FRAME_HEIGHT, origin, direction, FOV, MIN_DRAW_DIST, MAX_DRAW_DIST);
     
     // Define rotation matrix
-    float theta = 0.02f;
+    float theta = -0.02f;
     Eigen::Matrix3f R;
     R << cos(theta), -sin(theta), 0,
          sin(theta), cos(theta), 0,

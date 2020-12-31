@@ -36,7 +36,7 @@ void rasterize_mesh_triangle(Camera* cam, Eigen::MatrixXf* v, Eigen::MatrixXf* v
     
     // Backface culling
     if (is_backface(normal)) return;
-    
+
     // Unpack vertex coordinates.
     Eigen::Vector3f v0 = v->col(tri.iv0).head<3>();
     Eigen::Vector3f v1 = v->col(tri.iv1).head<3>();
@@ -147,7 +147,8 @@ void rasterize_mesh(Camera* cam, Object* obj)
     v = (M * (*mesh->v)).colwise().hnormalized();
     
     // Transform normals.
-    vn = (*cam->Mcam) * (*obj->mesh->vn);
+    Eigen::MatrixXf M_inv_T = M.inverse().transpose();
+    vn = (M_inv_T * (*obj->mesh->vn)).colwise().hnormalized();
     
     // Unpack texture
     Texture* texture = obj->texture;
